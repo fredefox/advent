@@ -1,0 +1,187 @@
+cabal-version:       2.2
+name:                advent2019
+version:             0.1.0.0
+license-file:        LICENSE
+author:              Frederik Hanghøj Iversen
+maintainer:          fhi.1990@gmail.com
+build-type:          Simple
+extra-source-files:  CHANGELOG.md
+
+common library-fields
+  build-depends:       base >=4.13 && <4.14, bytestring
+  default-language:    Haskell2010
+  default-extensions:
+      BangPatterns
+    , BinaryLiterals
+    , ConstraintKinds
+    , DefaultSignatures
+    , DeriveAnyClass
+    , DeriveDataTypeable
+    , DeriveFoldable
+    , DeriveFunctor
+    , DeriveGeneric
+    , DeriveLift
+    , DeriveTraversable
+    , DerivingStrategies
+    , DisambiguateRecordFields
+    , DuplicateRecordFields
+    , EmptyCase
+    , EmptyDataDecls
+    , ExistentialQuantification
+    , ExplicitForAll
+    , FlexibleContexts
+    , FlexibleInstances
+    , FunctionalDependencies
+    , GADTs
+    , GeneralisedNewtypeDeriving
+    , InstanceSigs
+    , LambdaCase
+    , MultiParamTypeClasses
+    , MultiWayIf
+    , NamedFieldPuns
+    , NamedWildCards
+    , NumDecimals
+    , PackageImports
+    , PartialTypeSignatures
+    , QuasiQuotes
+    , RankNTypes
+    , RecordWildCards
+    , ScopedTypeVariables
+    , StandaloneDeriving
+    , TypeApplications
+    , TypeFamilies
+    , UnicodeSyntax
+
+common executable-fields
+  import:              library-fields
+  build-depends:       advent2019
+
+library
+  import:              library-fields
+  hs-source-dirs:      src
+
+executable 01
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      01
+
+executable 02
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      02
+
+executable 03
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      03
+
+executable 04
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      04
+
+executable 05
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      05
+
+executable 06
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      06
+
+executable 07
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      07
+  build-depends: bmp
+
+executable 08
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      08
+
+executable 09
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      09
+
+executable 10
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      10
+
+executable 11
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      11
+
+executable 12
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      12
+
+executable 13
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      13
+
+executable 14
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      14
+
+executable 15
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      15
+
+executable 16
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      16
+
+executable 17
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      17
+
+executable 18
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      18
+
+executable 19
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      19
+
+executable 20
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      20
+
+executable 21
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      21
+
+executable 22
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      22
+
+executable 23
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      23
+
+executable 24
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      24
+
+executable 25
+  import:              executable-fields
+  main-is:             Main.hs
+  hs-source-dirs:      25
