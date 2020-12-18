@@ -2,14 +2,25 @@
 import Data.Foldable
 import Data.Array
 import Control.Monad
+import Data.List
+import System.IO
+import Control.Concurrent
 
 main :: IO ()
 main = do
   xs <- lines <$> getContents
   let r = mkArray xs
   let ys = untilRepeats $ iterate step r
-  traverse_ (putStrLn . unlines . toList') ys
-  print $ length $ filter (== '#') $ join $ toList' $ last ys
+  traverse_ (put . unlines . toList') ys
+  -- traverse_ put ["foo", "bar", "baz"]
+  -- print $ length $ filter (== '#') $ join $ toList' $ last ys
+  where
+  put :: String -> IO ()
+  put s = do
+    putStrLn [toEnum 0x1b, 'c']
+    putStrLn s
+    threadDelay 200000
+    -- hFlush stdin
 
 untilRepeats :: Eq a => [a] -> [a]
 untilRepeats = \case
