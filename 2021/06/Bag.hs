@@ -3,6 +3,8 @@
 {-# language ScopedTypeVariables #-}
 {-# language TypeApplications #-}
 {-# language TupleSections #-}
+{-# language StandaloneDeriving #-}
+{-# language DerivingStrategies #-}
 module Bag (Bag, map, singleton, size, filter, bag) where
 
 import Prelude hiding (filter, map)
