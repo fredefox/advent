@@ -1,22 +1,20 @@
 {-# language TypeApplications #-}
 import Data.Foldable (traverse_)
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import GHC.Exts
+import Bag (Bag)
+import qualified Bag
 
 main :: IO ()
 main = do
   xs <- fmap (read @Int) . words <$> getContents
-  traverse_ (print . sum) $ iterate step (toBag xs)
+  traverse_ (print . Bag.size) $ iterate step $ toBag xs
 
-toBag :: [Int] -> Map Int Int
-toBag = Map.fromListWith (+) . fmap go
-  where
-  go x = (x, 1)
+toBag :: [Int] -> Bag Int Int
+toBag = mconcat . fmap (`Bag.singleton` 1)
 
-step :: Map Int Int -> Map Int Int
-step xs = Map.unionWith (+) (Map.mapKeysWith (+) go xs) (Map.singleton 8 n)
+step :: Bag Int Int -> Bag Int Int
+step xs = Bag.map go xs <> Bag.singleton 8 n
   where
   go 0 = 6
   go x = pred x
-  n = sum $ fmap snd $ filter ((== 0) . fst) $ toList xs
+  n = Bag.size $ Bag.filter (== 0) xs
