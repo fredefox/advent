@@ -2,4 +2,4 @@ TAGS
 *.o
 *.hi
 dist-newstyle
-**/input
+**/input*
