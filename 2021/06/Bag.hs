@@ -5,12 +5,13 @@
 {-# language TupleSections #-}
 {-# language StandaloneDeriving #-}
 {-# language DerivingStrategies #-}
-module Bag (Bag, map, singleton, size, filter, bag) where
+module Bag (Bag, map, singleton, size, filter, bag, fromList, toList) where
 
 import Prelude hiding (filter, map)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import GHC.Exts
+import GHC.Exts (IsList)
+import qualified GHC.Exts
 
 newtype Bag n a = Bag (Map a n)
 
@@ -27,9 +28,17 @@ instance (Integral n, Ord a) => IsList (Bag n a) where
   fromList :: [(a, n)] -> Bag n a
   fromList = Bag . Map.fromListWith (+)
   toList :: Bag n a -> [(a, n)]
-  toList (Bag m) = toList m
+  toList (Bag m) = GHC.Exts.toList m
 
--- |
+fromList :: forall a n . Integral n => Ord a => [(a, n)] -> Bag n a
+fromList = GHC.Exts.fromList @(Bag n a)
+{-# INLINE fromList #-}
+
+toList :: forall a n . Integral n => Ord a => Bag n a -> [(a, n)]
+toList = GHC.Exts.toList @(Bag n a)
+{-# INLINE toList #-}
+
+  -- |
 -- >>> fold (fromList [("a", 3), ("b", 1), ("b", 1)])
 -- "aaabb"
 instance Integral n => Foldable (Bag n) where
