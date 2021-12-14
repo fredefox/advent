@@ -43,24 +43,15 @@ digit s = case lookup (Text.length s) m of { Just n -> n }
     where
     (|>) = (,)
 
--- | Possible segments that a wire connects to.
-type E = Map Char (Set Char)
+-- | Maps a digit to its segments
+type E = Map Int Text
 
--- | Record possible connections. If we e.g. see @ab@ we know that
--- @
---    a -> c f
---    b -> c f
--- @
--- because @ab@ uniquely identified the digit one which is displayed
--- on segments @c@ and @f@. Note that we're not recording that the
--- mappings @a -> c@ and @b -> c@ are mutually exclusive.
 record :: MonadState E m => Text -> m ()
-record s = case connections s of
-  Nothing -> pure ()
-  Just xs -> modify f
-    where
-    f :: E -> E
-    f m = Map.unionsWith Set.intersection $ m : ((`Map.singleton` xs) <$> Text.unpack s)
+record s = case lookup (Text.length s) [(2, 1), (4, 4), (3, 7), (7, 8)] of
+  Nothing -> do
+    m <- get
+    _ m
+  Just d -> modify (Map.insert d s)
 
 connections :: Text -> Maybe (Set Char)
 connections s = Map.lookup (Text.length s) segmentsLengths
