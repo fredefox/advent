@@ -10,6 +10,17 @@ import qualified Data.Map.Strict as Map
 import Bag (Bag)
 import qualified Bag
 
+-- | The input line is represented as a list of pairs.
+-- E.g. the input @NNCB@ is the list:
+-- @
+--   n n, n c, c b
+-- @
+-- The program will output one line per iteration counting the number
+-- of times a given symbol occurs in the left hand side of these
+-- pairs. In particular this means that the very last symbol (in this
+-- case @b@) is counted one time too few. So to get the result you
+-- must check if the most frequent symbol is the last character in the
+-- input and add one in that case.
 main :: IO ()
 main = do
   inp <- getContents
