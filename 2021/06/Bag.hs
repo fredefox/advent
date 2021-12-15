@@ -38,7 +38,7 @@ toList :: forall a n . Integral n => Ord a => Bag n a -> [(a, n)]
 toList = GHC.Exts.toList @(Bag n a)
 {-# INLINE toList #-}
 
-  -- |
+-- |
 -- >>> fold (fromList [("a", 3), ("b", 1), ("b", 1)])
 -- "aaabb"
 instance Integral n => Foldable (Bag n) where
