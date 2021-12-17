@@ -1,10 +1,13 @@
+{-# language DeriveAnyClass #-}
+{-# language DeriveGeneric #-}
+{-# language DerivingStrategies #-}
 {-# language InstanceSigs #-}
 {-# language LambdaCase #-}
-{-# language TypeApplications #-}
-{-# language DerivingStrategies #-}
-{-# language StandaloneDeriving #-}
-{-# language ScopedTypeVariables #-}
 {-# language NamedFieldPuns #-}
+{-# language ScopedTypeVariables #-}
+{-# language StandaloneDeriving #-}
+{-# language TypeApplications #-}
+{-# language BinaryLiterals #-}
 module Main (main, toByteString, fromAsciiLittleEndian, fromAscii, toHex) where
 
 import Data.Binary
@@ -18,6 +21,8 @@ import Data.Foldable
 import Data.Char
 import Control.Applicative
 import Control.Monad.Except
+import Test.QuickCheck
+import GHC.Generics (Generic)
 
 -- | Convert an ascii-representation of a little endian binary string
 -- to 'Byte'String'.
@@ -64,12 +69,16 @@ chunksOf n = \case
     where
     (a, b) = splitAt n xs
 
+class Serialize a where
+  serialize :: a -> [Bool]
+
 data Packet = Packet
   { version :: Word8
   , packetType :: Word8
   , payload :: Payload
   }
 
+deriving stock instance Eq Packet
 deriving stock instance Show Packet
 
 instance Binary Packet where
@@ -79,8 +88,35 @@ instance Binary Packet where
     traceShow b undefined
   put = undefined
 
-data Payload = Literal [Int] | PayloadOperator Operator
+deriving stock instance Generic Packet
 
+instance Arbitrary Packet where
+  arbitrary = Packet <$> chooseBoundedIntegral (0, 0b111) <*> chooseBoundedIntegral (0, 0b111) <*> arbitrary
+
+instance Serialize Packet where
+  serialize Packet{version, packetType, payload}
+    =  takeBits 3 version
+    <> takeBits 3 packetType
+    <> serialize payload
+
+takeBits :: Bits a => Int -> a -> [Bool]
+takeBits n a = testBit a <$> (reverse [0..pred n])
+
+data Payload = Literal [Word8] | PayloadOperator Operator
+
+unsnoc :: [a] -> Maybe ([a], a)
+unsnoc = \case
+  [] -> Nothing
+  xs -> Just (init xs, last xs)
+
+instance Serialize Payload where
+  serialize = \case
+    Literal xs -> case unsnoc $ takeBits 4 <$> xs of
+      Nothing -> []
+      Just (xss, x) -> (join $ (True : ) <$> xss) <> (False : x)
+    PayloadOperator op -> serialize op
+
+deriving stock instance Eq Payload
 deriving stock instance Show Payload
 
 instance Binary Payload where
@@ -88,9 +124,26 @@ instance Binary Payload where
   get = undefined
   put = undefined
 
+deriving stock instance Generic Payload
+
+instance Arbitrary Payload where
+  arbitrary = oneof [Literal <$> listOf1 (chooseBoundedIntegral (0, 0b1111)), PayloadOperator <$> arbitrary]
+
 data Operator = Operator {labelI :: Bool, labelL :: Int, subPackets :: [Packet] }
 
+deriving stock instance Eq Operator
 deriving stock instance Show Operator
+
+instance Arbitrary Operator where
+  arbitrary = do
+    l <- chooseInt (0, 3)
+    Operator True l <$> vector @Packet l
+
+instance Serialize Operator where
+  serialize Operator { labelI, labelL, subPackets }
+    =  takeBits 1 labelI
+    <> takeBits (if labelI then 13 else 15) labelL
+    <> foldMap serialize subPackets
 
 type S a = ExceptT String (State [Bool]) a
 
@@ -158,10 +211,10 @@ repeatM :: Monad m => Int -> m a -> m [a]
 repeatM 0 _ = pure mempty
 repeatM n m = (:) <$> m <*> repeatM (pred n) m
 
-rLiteral :: S [Int]
+rLiteral :: S [Word8]
 rLiteral = do
   b <- readN @Bool 1
-  n <- readN @Int 4
+  n <- readN @Word8 4
   (n:) <$> if b then rLiteral else pure []
 
 versions :: Packet -> [Word8]
@@ -171,12 +224,42 @@ versions Packet { version, payload } = version : vs
     Literal{} -> []
     PayloadOperator (Operator _ _ ps) -> foldMap versions ps
 
-run :: String -> Either String Packet
-run x = (`evalState` fromHex x) $ runExceptT rPacket
+run :: [Bool] -> Either String Packet
+run x = (`evalState` x) $ runExceptT rPacket
+
+runHex :: String -> Either String Packet
+runHex = run . fromHex
 
 main :: IO ()
-main = do
-  xs <- lines <$> getContents
-  let ks = run <$> xs
-  traverse_ print ks
-  traverse_ (print . fmap (sum . versions)) ks
+main = quickCheck prop
+-- main = do
+--   xs <- lines <$> getContents
+--   let ks = runHex <$> xs
+--   traverse_ print ks
+--   traverse_ (print . fmap (sum . versions)) ks
+
+propHex :: Property
+propHex = forAll g (\x -> toHex (fromHex x) == x)
+  where
+  g = listOf $ intToDigit <$> chooseInt (0, 0xf)
+
+prop :: Packet -> Bool
+prop p = Right p == q
+  where
+  bs :: [Bool]
+  bs = serialize p
+  q :: Either String Packet
+  q = run bs
+
+-- 01100001 00110001 00110010
+example :: Packet
+example = Packet {version = 5, packetType = 0, payload = Literal [10]}
+
+exampleBin :: [Bool]
+exampleBin = serialize example
+
+exampleHex :: String
+exampleHex = toHex exampleBin
+
+unit :: Bool
+unit = run exampleBin == Right example
