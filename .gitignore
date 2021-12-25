@@ -3,3 +3,7 @@ TAGS
 *.hi
 dist-newstyle
 **/input*
+*.out
+*.in
+*.expected
+Main
