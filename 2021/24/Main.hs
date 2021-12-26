@@ -1,6 +1,6 @@
 {-# language LambdaCase #-}
 {-# language TypeApplications #-}
-module Main (main) where
+module Main (main, step) where
 
 import Data.Foldable
 import System.Environment
@@ -14,6 +14,33 @@ main = do
 --   let regs = (0, 0, 0, 0)
 --   instructions <- fmap words . lines <$> getContents
 --   print $ run (regs, input) instructions
+
+data E = EVar Var | EOp BinOp E E deriving (Show, Eq)
+data C = CEql Reg E | Neq Reg E | CInp Reg E deriving (Show, Eq)
+data Reg = RegW | RegX | RegY | RegZ deriving (Show, Eq)
+data Var = Lit Int | Reg Reg deriving (Show, Eq)
+data BinOp = Add | Mul | Div | Mod | Sub | Eql | Neq deriving (Show, Eq)
+data Instruction = Inp Reg | Op BinOp Reg Var deriving (Show, Eq)
+
+inv :: BinOp -> BinOp
+inv = \case
+  Add -> Sub
+  Mul -> Div
+  Mod -> _
+  Sub -> Add
+  Eql -> Neq
+
+instrReg :: Instruction -> Reg
+instrReg = _
+
+step :: C -> Instruction -> C
+step c i = case c of
+  CEql r e -> if instrReg i == r then c' else c
+    where
+    c' = case i of
+      Inp _ -> CInp r e
+      Op op _ v -> CEql r (EOp (inv op) e (EVar v))
+  
 
 valid :: [[String]] -> Integer -> Bool
 valid instructions n = z == 0
