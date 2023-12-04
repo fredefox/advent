@@ -1,20 +1,36 @@
+{-# options_ghc -Wall #-}
 module Main (main) where
 
-import Data.Foldable (traverse_)
+import Data.Maybe (fromMaybe)
+import Data.Semigroup
 
 main :: IO ()
 main = do
   gs <- fmap parse . lines <$> getContents
-  part1 gs
+  print $ part1 gs
+  print $ part2 gs
 
-part1 gs = do
-  print $ sum $ fmap go $ filter solve gs
+part2 :: [G] -> Int
+part2 gs = sum $ solve2 <$> gs
+
+solve2 :: G -> Int
+solve2 (_, xs) = case foldMap go xs of
+  (a, b, c) -> getMax $ a * b * c
+  where
+  go x = (q "red", q "green", q "blue")
+    where
+    q c = Max $ fromMaybe 0 $ lookup c x
+
+part1 :: [G] -> Int
+part1 gs = sum $ fmap go $ filter solve gs
   where
   go (x, _) = case words x of
     _:y:_ -> read @Int y
     _ -> error "parse error"
 
-solve :: (String, [[(String, Int)]]) -> Bool
+type G = (String, [[(String, Int)]])
+
+solve :: G -> Bool
 solve (_, x) = all p x
   where
   p :: [(String, Int)] -> Bool
@@ -26,13 +42,12 @@ solve (_, x) = all p x
     q :: String -> Int -> Bool
     q k n = case lookup k l of { Nothing -> True ; Just m -> m <= n}
 
-parse :: String -> (String, [[(String, Int)]])
+parse :: String -> G
 parse s = case split (== ':') s of
   x:y:_ -> (x, fmap p . split (== ',') <$> split (== ';') y)
   _ -> error "Parse error"
   where
-  -- p :: String -> (String, Int)
-  p s = case words s of
+  p s' = case words s' of
     n:c:_ -> (c, read @Int n)
     _ -> error "Parse error"
 
