@@ -1,3 +1,4 @@
+{-# language LambdaCase #-}
 {-# options_ghc -Wall #-}
 module Main (main) where
 
@@ -7,15 +8,24 @@ import Data.Bits (shift)
 main :: IO ()
 main = do
   gs <- fmap parse . lines <$> getContents
-  -- traverse_ print gs
   print $ sum $ solve <$> gs
+  let res = solve2 $ zip (repeat 1) $ matches <$> gs
+  print $ sum $ fmap fst res
+
+solve2 :: [(Int, Int)] -> [(Int, Int)]
+solve2 = \case
+  [] -> []
+  (n, k) : xs -> (n, k) : solve2 (fmap (\(a, b) -> (a + n, b)) (take k xs) <> drop k xs)
 
 type G = (Int, ([Int], [Int]))
 
 solve :: G -> Int
-solve (_, (a, b)) = (1 :: Int) `shift` pred n
-  where
-  n = Set.size $ Set.fromList a `Set.intersection` Set.fromList b
+solve g = (1 :: Int) `shift` pred (matches g)
+
+matches :: G -> Int
+matches (_, (a, b))
+  = Set.size
+  $ Set.fromList a `Set.intersection` Set.fromList b
 
 parse :: String -> G
 parse s = case split (== ':') s of
