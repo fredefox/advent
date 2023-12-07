@@ -1,4 +1,4 @@
-{-# language StandaloneDeriving, DerivingStrategies, MultiWayIf, LambdaCase #-}
+{-# language StandaloneDeriving, DerivingStrategies, MultiWayIf, LambdaCase, ViewPatterns #-}
 {-# options_ghc -Wall #-}
 module Main (main, toString) where
 
@@ -12,7 +12,6 @@ main = do
   c <- fmap (go . words) . lines <$> getContents
   let xs = List.sortOn (\(h, _) -> score h) c
   print $ sum $ (\((_h, n), r) -> n * r) <$> zip xs [1..]
-
   where
   go = \case
     [h, n] -> (fromString h, read @Int n)
@@ -46,13 +45,27 @@ label :: Hand -> Label
 label (Hand h) = case grps of
   [_:_]                    -> Five
   [[_], [_,_,_,_]]         -> Four
-  [_:_, [_,_,_]]           -> FullHouse
+  [[_,_], [_,_,_]]         -> FullHouse
   [_:_, _:_, [_,_,_]]      -> Three
   [_:_, [_,_], [_,_]]      -> TwoPair
   [_:_, _:_, _:_, [_, _]]  -> OnePair
   _                        -> HighCard
   where
-  grps = List.sortOn length $ List.group $ List.sort h
+  grps = jokers $ List.sortOn length $ List.group $ List.sort h
+
+jokers :: [[Card]] -> [[Card]]
+jokers h = init_njs <> [replicate numjs l <> last_njs]
+  where
+  joker (Card n) = n == 0
+  js :: [[Card]]
+  js = filter (joker . head) h
+  numjs = case js of
+    [] -> 0
+    (x:_) -> length x
+  njs = filter (not . joker . head) h
+  last_njs = case njs of { [] -> mempty ; _ -> last njs }
+  init_njs = case njs of { [] -> mempty ; _ -> init njs }
+  l = head last_njs
 
 data Score = Score Label Hand
 
@@ -80,7 +93,7 @@ table =
     [ 'A' |> 14
     , 'K' |> 13
     , 'Q' |> 12
-    , 'J' |> 11
+    , 'J' |> 0
     , 'T' |> 10
     ]
   where
