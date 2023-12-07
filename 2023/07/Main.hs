@@ -1,12 +1,11 @@
 {-# language StandaloneDeriving, DerivingStrategies, MultiWayIf, LambdaCase #-}
-module Main (main) where
+{-# options_ghc -Wall #-}
+module Main (main, toString) where
 
 import qualified Data.Char as Char
 import qualified Data.Maybe as Maybe
 import Data.Tuple (swap)
-import Data.Foldable
 import qualified Data.List as List
-import qualified Data.List.NonEmpty as NonEmpty
 
 main :: IO ()
 main = do
@@ -30,28 +29,6 @@ deriving newtype instance Eq Hand
 deriving newtype instance Ord Hand
 deriving newtype instance Show Hand
 
--- data Score where
---   Five :: Card -> Score
---   Four :: Card -> Card -> Score
---   FullHouse :: Card -> Card -> Score
---   Three :: Card -> Card -> Card -> Score
---   TwoPair :: Card -> Card -> Card -> Score
---   OnePair :: Card -> Card -> Card -> Card -> Score
---   HighCard :: Hand -> Score
---
--- score :: Hand -> Score
--- score (Hand h) = case grps of
---   [x:_] -> Five x
---   [[x], [y,_,_,_]] -> Four y x
---   [x:_, [y,_,_]] -> FullHouse y x
---   [x:_, y:_, [z,_,_]] -> Three z (x `max` y) (x `min` y)
---   [x:_, [y,_], [z,_]] -> TwoPair (y `max` z) (y `min` z) x
---   [x:_, y:_, z:_, [zz, _]] -> OnePair zz x y z
---   _ -> HighCard $ Hand h
---   where
---   grps = List.sortOn length $ List.group $ List.sort h
---   n = length grps
-
 data Label where
   HighCard  :: Label
   OnePair   :: Label
@@ -67,16 +44,15 @@ deriving stock instance Ord Label
 
 label :: Hand -> Label
 label (Hand h) = case grps of
-  [x:_]                    -> Five
-  [[x], [y,_,_,_]]         -> Four
-  [x:_, [y,_,_]]           -> FullHouse
-  [x:_, y:_, [z,_,_]]      -> Three
-  [x:_, [y,_], [z,_]]      -> TwoPair
-  [x:_, y:_, z:_, [zz, _]] -> OnePair
+  [_:_]                    -> Five
+  [[_], [_,_,_,_]]         -> Four
+  [_:_, [_,_,_]]           -> FullHouse
+  [_:_, _:_, [_,_,_]]      -> Three
+  [_:_, [_,_], [_,_]]      -> TwoPair
+  [_:_, _:_, _:_, [_, _]]  -> OnePair
   _                        -> HighCard
   where
   grps = List.sortOn length $ List.group $ List.sort h
-  n = length grps
 
 data Score = Score Label Hand
 
