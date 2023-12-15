@@ -1,14 +1,12 @@
 {-# language OverloadedStrings, ViewPatterns, LambdaCase #-}
+{-# options_ghc -Wall #-}
 module Main (main) where
 
-import Data.Foldable
 import qualified Data.List as List
 import Data.IntSet (IntSet)
 import qualified Data.IntSet as Set
-import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
-import Data.Maybe
 import Control.Applicative
 
 main :: IO ()
