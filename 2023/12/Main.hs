@@ -1,83 +1,52 @@
-{-# language OverloadedStrings, TypeApplications, MultiWayIf, ViewPatterns #-}
+{-# language OverloadedStrings, TypeApplications, MultiWayIf, ViewPatterns, LambdaCase #-}
+{-# options_ghc -Wall #-}
 module Main (main) where
 
-import Data.Foldable
 import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
-import qualified Data.List as List
-import Data.List.NonEmpty (NonEmpty((:|)))
-import qualified Data.List.NonEmpty as NonEmpty
 import Control.Applicative
-
-import Debug.Trace as Trace
-
--- trace _ x = x
--- traceShowId = id
+import Control.Monad
 
 main :: IO ()
--- main = traverse_ print $ solve [('?', 3), ('.', 1)] [1,1]
--- main = traverse_ print $ solve [('?', 3), ('.', 1), ('#', 3)] [1,1,3]
-main = traverse_ print $ uncurry solve $ head $ parse "#?#? 1,2"
--- main = traverse_ print $ uncurry solve $ head $ parse "#? 2"
--- main = traverse_ print $ uncurry solve $ head $ parse "# 1"
--- main
---   = traverse_ print
---   $ solve' [('?',1),('#',2)] [3]
+main = do
+  xs <- parse <$> Text.getContents
+  print $ sum $ length . uncurry solve <$>  xs
 
--- main = print $ solve [('.', 1)] []
--- main = print $ solve [('?', 1)] [1]
--- main = do
---   xs <- parse <$> Text.getContents
---   traverse_ print xs
---   traverse_ (print . length . uncurry solve) xs
+solve :: String -> [Int] -> [String]
+solve xs = \case
+  [] -> if all blankable xs then pure (replicate (length xs) '.') else empty
+  (n:ns) -> if
+    | n <= length xs -> startsHere <|> skipOne xs (n:ns)
+    | otherwise -> empty
+    where
+    startsHere = case splitAt n xs of
+      (_, '#':_) -> empty
+      (as, _:bs) -> guard (all blockable as) *> do { r <- solve bs ns ; pure (replicate n '#' <> "." <> r) }
+      (as, bs) -> guard (all blockable as) *> solve bs ns *> pure (replicate n '#')
 
--- solve ???.### 1 1 3
--- = solve #??.### 1 1 3 <|> solve .??.### 1 1 3
+skipOne :: String -> [Int] -> [String]
+skipOne xs ns = case xs of
+  [] -> empty
+  (x:xss) -> guard (blankable x) *> do { r <- solve xss ns ; pure ("." <> r) }
 
--- solve #??? 1 = solve' ??? 0
--- solve #??? 2 = solve' ??? 1
--- solve #??? 5 = solve' ??? 4
-solve :: [(Char, Int)] -> [Int] -> [[(Char, Int)]]
-solve (trace "solve" -> traceShowId -> ((c, n):xs)) (traceShowId -> (m:ms)) = case c of
-  '?' -> solve' ((c,n):xs) (m:ms) <|> ((compactSim . (('.', 1):)) <$> solve (compactZero $ (c, pred n):xs) (m:ms))
-  -- '#' -> solve' xs ms
-  '#' -> solve' ((c, n) : xs) (m:ms)
-  _   -> ((c, n):) <$> solve xs (m:ms)
-solve [] [] = pure []
-solve (('.', n):xs) [] = (('.',n):) <$> solve xs []
-solve (('?', n):xs) [] = (('.',n):) <$> solve xs []
--- solve [] [] = pure []
-solve _ _ = empty
+blankable :: Char -> Bool
+blankable = \case
+    '?' -> True
+    '.' -> True
+    _ -> False
 
--- solve' ?? 2 = solve' ## 2
--- solve' ??? 2 = solve' ##. 2
--- solve' ???? 2 = solve' ##.? 2
-solve' :: [(Char, Int)] -> [Int] -> [[(Char, Int)]]
-solve' (trace "solve'" -> traceShowId -> t) (traceShowId -> u) = go t u
-  where
-  go (('?', n):_xs) (_m:_ms) | n == 0 = error "..."
-  go (('?', n):xs) (m:ms) | m >= n = solve' (compactSim $ ('#', n):xs) (m:ms)
-  go (('?', n):xs) (m:ms) = solve' (('#', m):compactSim (('.',1):(compactZero $ ('?', n-m-1):xs))) (m:ms)
-  go (('#', n):xs) (m:ms) = if
-    | n == m -> trace "match" $ (('#', n):) <$> solve xs ms
-    | n <= m -> trace "pre-match" $ (compactSim . (('#', n):)) <$> solve' xs (m - n : ms)
-    | otherwise -> trace "no match" empty
-  go _ _ = empty
-  -- go ((c, n):xs) (m:ms) = empty
+blockable :: Char -> Bool
+blockable = \case
+    '#' -> True
+    '?' -> True
+    _ -> False
 
-compactZero ((_, 0):xs) = xs
-compactZero xs = xs
-
-compactSim ((c0, n0):(c1, n1):xs) | c0 == c1 = (c0, n0 + n1):xs
-compactSim xs = xs
-
--- parse :: String ->
+parse :: Text -> [(String, [Int])]
 parse = fmap (go . Text.words) . Text.lines
   where
-  go (x:y:_) = (fmap row $ NonEmpty.group $ Text.unpack x, tread @Int <$> Text.splitOn "," y)
+  go (x:y:_) = (Text.unpack x, tread @Int <$> Text.splitOn "," y)
   go _ = error "Parse error"
-  row x@(c :| _) = (c, length x)
 
 tread :: forall a . Read a => Text -> a
 tread = read @a . Text.unpack
