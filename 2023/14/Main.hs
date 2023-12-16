@@ -6,8 +6,13 @@ import qualified Data.List as List
 main :: IO ()
 main = do
   xs <- lines <$> getContents
-  let ys = fmap tilt $ List.transpose xs
-  print $ sum $ foldMap weights ys
+  print $ solve $ turn xs
+
+turn :: [String] -> [String]
+turn = fmap tilt . List.transpose
+
+solve :: [String] -> Int
+solve xs = sum $ foldMap weights $ xs
 
 weights :: String -> [Int]
 weights xs = fmap fst $ filter (\(_, c) -> c == 'O') $ zip [1..] $ reverse xs
