@@ -9,19 +9,43 @@ import Data.Foldable
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.List as List
+import Data.Function
 
 main :: IO ()
 main = do
   xs <- getContents
   let b = parse xs
-  let pts
-        -- = fmap (fmap (\(Beam (V2 p) _) -> p) . Set.toList)
-        = id
-        $ iterate (step b) (Set.singleton x)
-  print $ length $ Set.map (\(Beam (V2 p) _) -> p) $ firstDup pts
-  -- traverse_ (printGized (Array.bounds b)) $ pts
+  let (_, (n, m)) = Array.bounds b
+  let ps = mkPs n m
+  print $ solve b p
+  print ps
+  let ys = solve b <$> ps
+  traverse_ print $ increasing ys
+  print $ maximum $ ys
   where
-  x = Beam (V2 (0, 0)) R
+  p = Beam (V2 (0, 0)) R
+  mkPs :: Int -> Int -> [Beam Int]
+  mkPs n m
+    =  ((\j -> Beam (V2 (0, j)) D) <$> [0..n])
+    <> ((\i -> Beam (V2 (i, 0)) R) <$> [0..m])
+    <> ((\j -> Beam (V2 (n, j)) U) <$> [0..n])
+    <> ((\i -> Beam (V2 (i, m)) L) <$> [0..m])
+
+increasing :: Ord a => [a] -> [a]
+increasing = increasingOn id
+
+increasingOn :: Ord b => (a -> b) -> [a] -> [a]
+increasingOn f = monotonously ((>) `on` f)
+
+monotonously :: (a -> a -> Bool) -> [a] -> [a]
+monotonously p = \case
+  []     -> []
+  (x:xs) -> x : monotonously p (dropWhile (p x) xs)
+
+solve :: Array (Int, Int) Char -> Beam Int -> Int
+solve b x = length $ Set.map (\(Beam (V2 p) _) -> p) $ firstDup pts
+  where
+  pts = iterate (step b) (Set.singleton x)
 
 printGized :: ((Int, Int), (Int, Int)) -> Set (Int, Int) -> IO ()
 printGized b = putStrLn . unlines . unMatrix . mkArray
