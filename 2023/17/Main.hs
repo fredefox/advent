@@ -1,3 +1,4 @@
+{-# language MultiWayIf #-}
 module Main (main) where
 
 import Data.Array.IO as Array
@@ -37,7 +38,7 @@ step w a = go
     Nothing -> pure ()
     Just ((ix, dir) :-> v, q') -> do
       b <- Array.getBounds a
-      qs <- deltas `forM` \delta -> do
+      qs <- deltas dir `forM` \delta -> do
         let ix' = delta `plus` ix
         let dir' = dir `plus'` delta
         if not (b `Ix.inRange` ix' && lim dir')
@@ -57,12 +58,17 @@ plus' :: (Int, Int) -> (Int, Int) -> (Int, Int)
 (_, j) `plus'` (0, j') = (0, j + j')
 (i, _) `plus'` (i', _) = (i + i', 0)
 
-lim (i, j) = abs i <= 3 && abs j <= 3 && (i /= 0 || j /= 0)
+lim (i, j) = abs i <= 10 && abs j <= 10 && (i /= 0 || j /= 0)
 
 (a0, b0) `plus` (a1, b1) = (a0 + a1, b0 + b1)
 
-deltas :: [(Int, Int)]
-deltas = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+deltas :: (Int, Int) -> [(Int, Int)]
+deltas (i, j) = if
+  | i == 0 && j < 0 && abs j < 4 -> [(0, -1)]
+  | i == 0 && j > 0 && abs j < 4 -> [(0, 1)]
+  | j == 0 && i < 0 && abs i < 4 -> [(-1, 0)]
+  | j == 0 && i > 0 && abs i < 4 -> [(1, 0)]
+  | otherwise -> [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
 neighbors :: (Int, Int) -> [(Int, Int)]
 neighbors (i, j) =
