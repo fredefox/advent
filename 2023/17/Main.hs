@@ -7,43 +7,57 @@ import qualified Data.Ix as Ix
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Semigroup
+import Data.PSQueue (PSQ, Binding((:->)))
+import qualified Data.PSQueue as Queue
 
 main :: IO ()
 main = do
   w <- parse <$> getContents
   let b@(_, ixmax) = Array.bounds w
   m <- Array.newArray @IOArray @(Map (Int, Int) Int) @IO b mempty
-  step w m 0 (0, 0) (0, 0)
+  step w m (Queue.singleton ((0, 0), (0, 0)) 0)
   ascs <- Array.getAssocs m
-  -- print ascs
   e <- Array.readArray m ixmax
   print $ foldMap Min e
 
-step :: Array (Int, Int) Int -> IOArray (Int, Int) (Map (Int, Int) Int) -> Int -> (Int, Int) -> (Int, Int) -> IO ()
+instance (Ord k, Ord p) => Semigroup (PSQ k p) where
+  a <> b = Queue.foldr (\(k :-> v) -> Queue.insert k v) a b
+
+step
+  :: Array (Int, Int) Int
+  -> IOArray (Int, Int) (Map (Int, Int) Int)
+  -> PSQ ((Int, Int), (Int, Int)) Int
+  -> IO ()
 step w a = go
   where
-  go :: Int -> (Int, Int) -> (Int, Int) -> IO ()
-  go v dir ix = do
-    b <- Array.getBounds a
-    -- let ixs = filter (b `Ix.inRange`) $ neighbors ix
-    deltas `forM_` \delta -> do
-      let ix' = delta `plus` ix
-      let dir' = dir `plus'` delta
-      when (b `Ix.inRange` ix' && lim dir') $ do
-        -- print ix'
-        -- print dir'
-        e <- Array.readArray a ix'
-        let d = w Array.! ix'
-        let v' = v + d
-        let vmin' = case Map.lookup dir' e of { Nothing -> v' ; Just vmin -> vmin `min` v' }
-        Array.writeArray a ix' (Map.insert dir' vmin' e)
-        when (v' <= vmin') (go v' dir' ix')
+  go
+    :: PSQ ((Int, Int), (Int, Int)) Int
+    -> IO ()
+  go q = case Queue.minView q of
+    Nothing -> pure ()
+    Just ((ix, dir) :-> v, q') -> do
+      b <- Array.getBounds a
+      qs <- deltas `forM` \delta -> do
+        let ix' = delta `plus` ix
+        let dir' = dir `plus'` delta
+        if not (b `Ix.inRange` ix' && lim dir')
+        then pure []
+        else do
+          e <- Array.readArray a ix'
+          let d = w Array.! ix'
+          let v' = v + d
+          let vmin' = case Map.lookup dir' e of { Nothing -> v' ; Just vmin -> vmin `min` v' }
+          Array.writeArray a ix' (Map.insert dir' vmin' e)
+          if (v' <= vmin') then pure [(ix', dir') :-> v'] else pure []
+      let q'' = q' <> Queue.fromList (join qs)
+      let ixmax = snd b
+      when (ix /= ixmax) $ go q''
 
 plus' :: (Int, Int) -> (Int, Int) -> (Int, Int)
 (_, j) `plus'` (0, j') = (0, j + j')
 (i, _) `plus'` (i', _) = (i + i', 0)
 
-lim (i, j) = abs i <= 3 && abs j <= 3
+lim (i, j) = abs i <= 3 && abs j <= 3 && (i /= 0 || j /= 0)
 
 (a0, b0) `plus` (a1, b1) = (a0 + a1, b0 + b1)
 
