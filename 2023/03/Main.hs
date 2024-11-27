@@ -1,3 +1,4 @@
+#!/usr/bin/env runhaskell
 {-# language LambdaCase, ViewPatterns #-}
 module Main (main, matrix, unMatrix) where
 
@@ -15,22 +16,36 @@ main :: IO ()
 main = do
   xs <- getContents
   let m = matrix $ lines xs
-  traverse_ print $ solve m
+  print $ sum $ solve m
 
-solve m = filter (near m) $ beginnings
+solve :: Array (Int, Int) Char -> [Int]
+solve m = numbersAt m $ filter (near m) $ beginnings m
+
+numbersAt :: Array (Int, Int) Char -> [(Int, Int)] -> [Int]
+numbersAt m = fmap (step 0)
   where
-  beginnings = reverse $ go [] $ Array.assocs m
+  step :: Int -> (Int, Int) -> Int
+  step acc ix@(i, j)
+    | p         = step (acc * 10 + (Char.digitToInt c)) (i, succ j)
+    | otherwise = acc
     where
-    go acc ((ix@(i, j), c):xs)
-      | isBeginningOfNumber
-      = go (ix : acc) xs
-      where
-      isBeginningOfNumber
-        =  Char.isDigit c
-        && (j == 0 || not (Char.isDigit (m Array.! (i, pred j))))
-    go acc (_:xs) = go acc xs
-    go acc [] = acc
+    p = (Array.bounds m `Ix.inRange` ix) && Char.isDigit c
+    c = m Array.! ix
 
+beginnings :: (Num b, Ix a, Ix b, Enum b) => Array (a, b) Char -> [(a, b)]
+beginnings m = reverse $ go [] $ Array.assocs m
+  where
+  go acc ((ix@(i, j), c):xs)
+    | isBeginningOfNumber
+    = go (ix : acc) xs
+    where
+    isBeginningOfNumber
+      =  Char.isDigit c
+      && (j == 0 || not (Char.isDigit (m Array.! (i, pred j))))
+  go acc (_:xs) = go acc xs
+  go acc [] = acc
+
+nums :: (Ix a, Ix b, Enum b) => Array (a, b) Char -> (a, b) -> Int
 nums m = read @Int . reverse . go [] 
   where
   go acc ix@(i, j) = case safeIndex m ix of
@@ -48,6 +63,7 @@ near m ((i, j))
   (_, jmax) = snd $ Array.bounds m
   next = (j <= jmax) && (Char.isDigit (m Array.! (i, j)) || Char.isDigit (m Array.! (i, pred j))) && near m (i, succ j)
 
+safeIndex :: Ix i => Array i a -> i -> Maybe a
 safeIndex m ix = if Array.bounds m `Ix.inRange` ix then Just $ m Array.! ix else Nothing
 
 isSymbol :: Char -> Bool
@@ -80,3 +96,4 @@ array :: Ix ix => (ix, ix) -> (ix -> e) -> Array ix e
 array b f  = Array.array b (f' <$> Array.range b)
   where
   f' i = (i, f i)
+
