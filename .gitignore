@@ -2,10 +2,10 @@ TAGS
 *.o
 *.hi
 dist-newstyle
-**/input*
 *.out
 *.in
 *.expected
 Main
 
 input*
+main
