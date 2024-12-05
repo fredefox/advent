@@ -31,24 +31,34 @@ buildGraph :: Ord key => (key -> node) -> [(key, key)] -> Adj node key
 buildGraph f = fromMap f . fromEdges
 
 buildRules :: [[Int]] -> [Int] -> [(Int, Int)]
-buildRules xs ys = fmap go xs0 <> ys0
+buildRules xs ys = relevantRules xs ys <> zip ys (tail ys)
+
+relevantRules :: [[Int]] -> [Int] -> [(Int, Int)]
+relevantRules xs ys = fmap go xs0
   where
   xs0 :: [[Int]]
   xs0 = filter (null . (\\ ys)) xs
   go (a:b:_) = (a, b)
   go _ = error "Invalid input"
-  ys0 = zip ys (tail ys)
 
 main :: IO ()
 main = do
-  Right (rs, ps) <- parse <$> getContents
-  print $ solve rs ps
+  Right (rs, pgs) <- parse <$> getContents
+  print $ solve rs pgs
+  let wrong = filter (not . valid rs) pgs
+  print $ sum $ median <$> tops rs <$> wrong
+
+tops :: [[Int]] -> [Int] -> [Int]
+tops rs pg = go . f <$> topSort g
+  where
+  (g, f, _) = graphFromEdges $ buildGraph id $ relevantRules rs pg
+  go (a, _, _) = a
 
 solve :: [[Int]] -> [[Int]] -> Int
-solve rs pgs = sum $ fmap median $ filter p pgs
-  where
-  p :: [Int] -> Bool
-  p pg = isAcyclic $ buildGraph id $ buildRules rs pg
+solve rs pgs = sum $ fmap median $ filter (valid rs) pgs
+
+valid :: [[Int]] -> [Int] -> Bool
+valid rs pg = isAcyclic $ buildGraph id $ buildRules rs pg
 
 parse :: String -> Either ParseError ([[Int]], [[Int]])
 parse = runParser parser () mempty
