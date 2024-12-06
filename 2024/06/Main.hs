@@ -55,28 +55,39 @@ chunksOf n xs = a : chunksOf n b
   where
   (a, b) = splitAt n xs
 
-type Direction a = (a -> a)
+data Direction a = North | South | East | West
 
-north, south, east, west :: Direction (Int, Int)
-north (i, j) = (pred i, j)
-south (i, j) = (succ i, j)
-east (i, j) = (i, succ j)
-west (i, j) = (i, pred j)
+class Heading a where
+  heading :: Direction a -> a -> a
 
-directions :: [Direction (Int, Int)]
-directions = cycle [north, east, south, west]
+instance Heading (Int, Int) where
+  heading :: Direction (Int, Int) -> (Int, Int) -> (Int, Int)
+  heading = \case
+    North -> \(i, j) -> (pred i, j)
+    South -> \(i, j) -> (succ i, j)
+    East -> \(i, j) -> (i, succ j)
+    West -> \(i, j) -> (i, pred j)
 
-step :: Ix ix => Array ix Char -> ([Direction ix], ix) -> ([Direction ix], ix)
+directions :: [Direction a]
+directions = cycle [North, East, South, West]
+
+step
+  :: Ix ix
+  => Heading ix
+  => Array ix Char
+  -> ([Direction ix], ix)
+  -> ([Direction ix], ix)
 step m (ds, ix) = case check m (ds, ix) of
-  ds'@(d:_) -> (ds', d ix)
+  ds'@(d:_) -> (ds', heading d ix)
   _ -> ([], ix)
 
 check
-  :: Ix ix
+  :: Heading ix
+  => Ix ix
   => Array ix Char
   -> ([Direction ix], ix)
   -> [Direction ix]
-check m (d:ds, ix) = case m !? d ix of
+check m (d:ds, ix) = case m !? heading d ix of
   Nothing -> []
   Just '#' -> check m (ds, ix)
   Just _ -> d:ds
