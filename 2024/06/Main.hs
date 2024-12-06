@@ -15,6 +15,7 @@ import Control.Monad
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Foldable
+import System.IO
 
 main :: IO ()
 main = do
@@ -23,6 +24,14 @@ main = do
   indicesOf ('^' ==) m `forM_` \idx -> do
     let w = walk heading m idx
     print $ areaOfWalk w
+    let ns = scanl @Int (go heading m idx) 0 (Array.indices m)
+    print $ last ns
+
+go :: Heading (Int, Int) -> Array (Int, Int) Char -> (Int, Int) -> Int -> (Int, Int) -> Int
+go heading m idx0 n idx = if repitition w' then succ n else n
+  where
+  m' = m Array.// [(idx, '#')]
+  w' = walk heading m' idx0
 
 areaOfWalk :: Ord a => Walk a -> Int
 areaOfWalk w = Set.size $ Set.map snd $ collect w
@@ -127,10 +136,13 @@ check
   -> Array ix Char
   -> (Direction ix, ix)
   -> Maybe (Direction ix)
-check heading m (d, ix) = case m !? heading d ix of
-  Nothing -> Nothing
-  Just '#' -> check heading m (turn d, ix)
-  Just _ -> Just d
+check heading m = go 0
+  where
+  go n (d, ix) = case m !? heading d ix of
+    _ | n == 4 -> Nothing
+    Nothing -> Nothing
+    Just '#' -> go (succ n) (turn d, ix)
+    Just _ -> Just d
 
 turn :: Direction ix -> Direction ix
 turn = \case
