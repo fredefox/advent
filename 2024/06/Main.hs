@@ -15,7 +15,8 @@ main = do
   indicesOf ('^' ==) m `forM_` \idx -> do
     let w = walk heading m idx
     print $ areaOfWalk w
-    print $ solve heading m idx (Array.indices m)
+    let indices = Set.toList $ Set.map snd $ collect w
+    print $ solve heading m idx indices
 
 solve :: Heading (Int, Int) -> Array (Int, Int) Char -> (Int, Int) -> [(Int, Int)] -> Int
 solve hdn m idx0 = foldl go 0
