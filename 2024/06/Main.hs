@@ -12,20 +12,73 @@ module Main (main) where
 import Data.Array (Array, Ix)
 import qualified Data.Array as Array
 import Control.Monad
+import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Foldable
 
 main :: IO ()
 main = do
   xs <- lines <$> getContents
   let m = matrix xs
-  indicesOf ('^' ==) m `forM_` part1 m
+  indicesOf ('^' ==) m `forM_` \idx -> do
+    let w = walk heading m idx
+    print $ areaOfWalk w
 
-part1 :: Array (Int, Int) Char -> (Int, Int) -> IO ()
-part1 m idx = do
-  let posAndDir = fmap (\(a, b) -> (a, b)) $ iterate (step heading m) (North, idx)
-  let coverages = scanl (flip Set.insert) mempty posAndDir
-  let s = fst $ head $ dropWhile (uncurry (/=)) $ zip coverages (tail coverages)
-  print $ Set.size $ Set.map snd s
+areaOfWalk :: Ord a => Walk a -> Int
+areaOfWalk w = Set.size $ Set.map snd $ collect w
+
+-- | `collect xs` contains the prefix of `xs` up until the first
+-- repitition.
+collect :: forall a . Ord a => [a] -> Set a
+collect = go mempty
+  where
+  go :: Set a -> [a] -> Set a
+  go acc = \case
+    [] -> acc
+    (x:xs)
+      | x `Set.member` acc -> acc
+      | otherwise -> go (Set.insert x acc) xs
+
+-- | Similar to @collect@ but just determines if there is a repition.
+repitition :: forall a . Ord a => [a] -> Bool
+repitition = go mempty
+  where
+  go :: Set a -> [a] -> Bool
+  go acc = \case
+    [] -> False
+    (x:xs)
+      | x `Set.member` acc -> True
+      | otherwise -> go (Set.insert x acc) xs
+
+-- | Returns the set of all position-direction pairs that have been
+-- visited in this run.
+visitedPositions :: Ix ix => Heading ix -> Array ix Char -> ix -> (Set.Set (Direction ix, ix))
+visitedPositions heading m idx = fst $ head $ dropWhile (uncurry (/=)) $ zip coverages (tail coverages)
+  where
+  coverages = scanl (flip Set.insert) mempty $ walk heading m idx
+
+type Walk ix = [(Direction ix, ix)]
+
+walk :: Ix ix => Heading ix -> Array ix Char -> ix -> Walk ix
+walk heading m idx = iterateMaybe (step heading m) (North, idx)
+
+iterateMaybe :: (a -> Maybe a) -> a -> [a]
+iterateMaybe f a = a : case f a of
+  Nothing -> []
+  Just b -> iterateMaybe f b
+
+-- hasLoop :: forall ix . Ix ix => Heading ix -> Array ix Char -> ix -> Bool
+-- hasLoop heading m ix = go mempty (uniquePrefix $ walk heading m ix)
+--   where
+--   go :: Set.Set (Direction ix, ix) -> Walk ix -> Bool
+--   go _ [] = False
+--   go s (x:xs)
+--     | Set.member x s = True
+--     | otherwise    = go (Set.insert x s) xs
+
+-- uniquePrefix :: Eq a => [a] -> [a]
+-- uniquePrefix [] = []
+-- uniquePrefix xs = fmap snd $ takeWhile (uncurry (/=)) $ zip xs (tail xs)
 
 update :: Array (Int, Int) Char -> [(Int, Int)] -> [Array (Int, Int) Char]
 update m (ix:ixs) = m' : update m ixs
@@ -63,10 +116,10 @@ step
   => Heading ix
   -> Array ix Char
   -> (Direction ix, ix)
-  -> (Direction ix, ix)
-step heading m (d, ix) = case check heading m (d, ix) of
-  Just d' -> (d', heading d' ix)
-  Nothing -> (d, ix)
+  -> Maybe (Direction ix, ix)
+step heading m (d, ix) = f <$> check heading m (d, ix)
+  where
+  f d' = (d', heading d' ix)
 
 check
   :: Ix ix
