@@ -6,38 +6,26 @@
 -- have time complexity O(n ^ 2) where n is the size of the maze
 -- (number of cells).
 
-{-# language GHC2021, LambdaCase #-}
+{-# language GHC2021, LambdaCase, DerivingStrategies #-}
 module Main (main) where
 
 import Data.Array (Array, Ix)
 import qualified Data.Array as Array
 import Control.Monad
-import Control.Applicative
-import Data.Maybe
-import Data.List (isPrefixOf)
-import Data.Foldable
 import qualified Data.Set as Set
 
 main :: IO ()
 main = do
   xs <- lines <$> getContents
   let m = matrix xs
-  let (idx:_) = indicesOf ('^' ==) m
-  part1 m idx
+  indicesOf ('^' ==) m `forM_` part1 m
 
 part1 :: Array (Int, Int) Char -> (Int, Int) -> IO ()
 part1 m idx = do
-  let positions = fmap snd $ iterate (step m) (directions, idx)
-  let coverages = fmap Set.size $ scanl (flip Set.insert) mempty positions
-  let (_, (t, u)) = Array.bounds m
-  -- The drop thing is a weird way to determine if we're done.  That's
-  -- because I'm not saving the directions we're heading, so it's not
-  -- sufficient to check that there are no new positions added at a
-  -- given point in time. 4 * N * M is an upper bound for how many
-  -- steps we can walk around in the maze before we've been in the
-  -- same position in the same direction twice (and therefore are in a
-  -- loop).
-  print $ head $ drop (4 * t * u) $ coverages
+  let posAndDir = fmap (\(a, b) -> (a, b)) $ iterate (step heading m) (North, idx)
+  let coverages = scanl (flip Set.insert) mempty posAndDir
+  let s = fst $ head $ dropWhile (uncurry (/=)) $ zip coverages (tail coverages)
+  print $ Set.size $ Set.map snd s
 
 update :: Array (Int, Int) Char -> [(Int, Int)] -> [Array (Int, Int) Char]
 update m (ix:ixs) = m' : update m ixs
@@ -57,41 +45,46 @@ chunksOf n xs = a : chunksOf n b
 
 data Direction a = North | South | East | West
 
-class Heading a where
-  heading :: Direction a -> a -> a
+deriving stock instance Show (Direction a)
+deriving stock instance Eq (Direction a)
+deriving stock instance Ord (Direction a)
 
-instance Heading (Int, Int) where
-  heading :: Direction (Int, Int) -> (Int, Int) -> (Int, Int)
-  heading = \case
-    North -> \(i, j) -> (pred i, j)
-    South -> \(i, j) -> (succ i, j)
-    East -> \(i, j) -> (i, succ j)
-    West -> \(i, j) -> (i, pred j)
+type Heading a = Direction a -> a -> a
 
-directions :: [Direction a]
-directions = cycle [North, East, South, West]
+heading :: Heading (Int, Int)
+heading = \case
+  North -> \(i, j) -> (pred i, j)
+  South -> \(i, j) -> (succ i, j)
+  East -> \(i, j) -> (i, succ j)
+  West -> \(i, j) -> (i, pred j)
 
 step
   :: Ix ix
   => Heading ix
-  => Array ix Char
-  -> ([Direction ix], ix)
-  -> ([Direction ix], ix)
-step m (ds, ix) = case check m (ds, ix) of
-  ds'@(d:_) -> (ds', heading d ix)
-  _ -> ([], ix)
+  -> Array ix Char
+  -> (Direction ix, ix)
+  -> (Direction ix, ix)
+step heading m (d, ix) = case check heading m (d, ix) of
+  Just d' -> (d', heading d' ix)
+  Nothing -> (d, ix)
 
 check
-  :: Heading ix
-  => Ix ix
-  => Array ix Char
-  -> ([Direction ix], ix)
-  -> [Direction ix]
-check m (d:ds, ix) = case m !? heading d ix of
-  Nothing -> []
-  Just '#' -> check m (ds, ix)
-  Just _ -> d:ds
-check _ ([], _) = []
+  :: Ix ix
+  => Heading ix
+  -> Array ix Char
+  -> (Direction ix, ix)
+  -> Maybe (Direction ix)
+check heading m (d, ix) = case m !? heading d ix of
+  Nothing -> Nothing
+  Just '#' -> check heading m (turn d, ix)
+  Just _ -> Just d
+
+turn :: Direction ix -> Direction ix
+turn = \case
+  North -> East
+  East -> South
+  South -> West
+  West -> North
 
 (!?) :: Ix i => Array i e -> i -> Maybe e
 arr !? i =
