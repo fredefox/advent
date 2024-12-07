@@ -10,18 +10,29 @@ main = do
   xs <- getContents
   case runParser parser () mempty xs of
     Left e -> throwIO e
-    Right tbl -> print $ sum $ fmap fst $ filter (uncurry solve) tbl
+    Right tbl -> do
+      print $ solve [(+), (*)] tbl
+      print $ solve [(+), (*), conc] tbl
 
-solve :: Int -> [Int] -> Bool
-solve x = (x `elem`) . combinations
+solve :: (Eq a, Num a) => [a -> a -> a] -> [(a, [a])] -> a
+solve ops tbl = sum $ fmap fst $ filter (uncurry (hasSolution ops)) tbl
 
-combinations :: [Int] -> [Int]
-combinations [] = []
-combinations (x0:xs0) = go [x0] xs0
+hasSolution :: Eq a => [a -> a -> a] -> a -> [a] -> Bool
+hasSolution ops x = (x `elem`) . combinations ops
+
+combinations :: forall a . [a -> a -> a] -> [a] -> [a]
+combinations _ [] = []
+combinations ops (x0:xs0) = go [x0] xs0
   where
-  go :: [Int] -> [Int] -> [Int]
+  go :: [a] -> [a] -> [a]
   go accs [] = accs
-  go accs (x:xs) = go (fmap (x +) accs <> fmap (x *) accs) xs
+  go accs (x:xs) = go (foldMap op ops) xs
+    where
+    op :: (a -> a -> a) -> [a]
+    op f = fmap (`f` x) accs
+
+conc :: Int -> Int -> Int
+conc a b = read (show a <> show b)
 
 parser :: Parsec String () [(Int, [Int])]
 parser = many $ line <* newline
