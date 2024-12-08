@@ -15,16 +15,28 @@ main = do
   xs <- lines <$> getContents
   let m = matrix xs
   let w = makeMap (/= '.') m
-  let expanded = filter (inBounds m) $ foldMap expand $ foldMap pairs w
-  print $ Set.size $ Set.fromList expanded
+  print $ solve m w
 
-expand :: ((Int, Int), (Int, Int)) -> [(Int, Int)]
-expand (a, b) = [a `plus` d, b `minus` d]
+solve :: Foldable t => Array (Int, Int) e -> t [(Int, Int)] -> Int
+solve m w
+  = Set.size
+  $ Set.fromList
+  $ foldMap (expand (takeWhile (inBounds m)))
+  $ foldMap pairs w
+
+expand :: ([(Int, Int)] -> [(Int, Int)]) -> ((Int, Int), (Int, Int)) -> [(Int, Int)]
+expand p (a, b) = alternate a' b'
   where
   d = dist a b
+  a' = p $ iterate (`plus` d) a
+  b' = p $ iterate (`minus` d) b
 
 inBounds :: Ix a => Array a e -> a -> Bool
 m `inBounds` ix = Array.bounds m `Array.inRange` ix
+
+alternate :: [a] -> [a] -> [a]
+alternate (x:xs) (y:ys) = x : y : alternate xs ys
+alternate xs ys = xs <> ys
 
 minus, plus :: (Int, Int) -> (Int, Int) -> (Int, Int)
 (a0, a1) `minus` (b0, b1) = (a0 - b0, a1 - b1)
