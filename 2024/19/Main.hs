@@ -22,26 +22,28 @@ main = do
   case runParser parser () mempty inp of
     Left e -> throwIO e
     Right (candidates, b) -> do
-      let xs = filter (solve candidates) b
+      let xs = filter (not . null . solve candidates) b
       traverse_ putStrLn xs
       print $ length xs
 
-solve :: [[Char]] -> [Char] -> Bool
+solve :: forall f . Alternative f => Monad f => f [Char] -> [Char] -> f [String]
 solve candidates xs = last $ Array.elems w
   where
+  w :: Array Int (f [String])
   w = Array.listArray bounds (f <$> Array.range bounds)
   u :: Array Int Char
   u = Array.listArray bounds xs
   bounds = (0, length xs)
-  f :: Int -> Bool
+  f :: Int -> f [String]
   f ix
-    | ix <= 0 = True
-    | otherwise = not $ null $ do
+    | ix <= 0 = pure []
+    | otherwise = do
         candidate <- candidates
         let jx = (ix - length (candidate))
         guard $ jx >= 0
         let x = slice u jx ix
-        guard $ x == candidate && w Array.! jx
+        guard $ x == candidate
+        (candidate:) <$> w Array.! jx
 
 -- 398 is too high
 slice :: Enum ix => Ix ix => Array ix a -> ix -> ix -> [a]
