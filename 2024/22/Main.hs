@@ -12,10 +12,13 @@ main = do
   xs <- fmap (read @Int) . lines <$> getContents
   let ys = take 2001 . iterate step <$> xs
   print $ sum $ fmap last ys
-  print $ maximum $ Map.elems $ mkMaps ys
+  print $ maximum $ mkMaps ys
 
 runsOf :: Int -> [a] -> [[a]]
-runsOf n xs = take (succ $ length xs - n) $ fmap (take n) $ List.tails xs
+runsOf n xs = filter (lengthAtLeast 4) $ fmap (take n) $ List.tails xs
+
+lengthAtLeast :: Int -> [a] -> Bool
+lengthAtLeast n = not . null . drop (pred n)
 
 mkMaps :: [[Int]] -> Map [Int] Int
 mkMaps = Map.unionsWith (+) . fmap mkMap
@@ -24,9 +27,7 @@ mkMap :: [Int] -> Map [Int] Int
 mkMap xs
   = Map.fromList
   $ reverse
-  $ fmap (\k -> (fmap fst k, snd $ last k))
-  $ runsOf 4
-  $ diffOfLastDigits xs `zip` lastDigits xs
+  $ runsOf 4 (diffOfLastDigits xs) `zip` drop 3 (lastDigits xs)
 
 diffOfLastDigits :: [Int] -> [Int]
 diffOfLastDigits xs = zipWith subtract (0 : lastDigits xs) $ lastDigits xs
