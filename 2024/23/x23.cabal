@@ -1,0 +1,20 @@
+cabal-version:   3.4
+name:            x23
+version:         0.1.0.0
+license:         BSD-3-Clause
+license-file:    LICENSE
+author:          Frederik Hanghøj Iversen
+maintainer:      fhi.1990@gmail.com
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
+
+common warnings
+    ghc-options: -Wall
+
+executable x23
+    import:           warnings
+    main-is:          Main.hs
+    build-depends:    base ^>=4.20.0.0, containers, array, parsec
+    hs-source-dirs:   .
+    default-language: GHC2024
+    other-modules: Data.Graph.Clique
